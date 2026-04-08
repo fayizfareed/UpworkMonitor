@@ -6,6 +6,7 @@ const { calculateNextInterval, randomDelay, simulateHumanBehavior, delay } = req
 const { scrapeJobsOnPage, scrapeDeepJobDetails } = require('./scraper');
 const { detectNewJobs } = require('./detector');
 const { applyCustomFilters, isCountryExcluded } = require('./filter');
+const { isLoggedIn, performLogin } = require('./auth');
 const { sendJobNotification, sendSystemMessage } = require('./notifier');
 
 /**
@@ -31,6 +32,20 @@ async function startCrawler()
       userDataDir: userDataDir
     }
   });
+
+  // Start with a login check
+  if (config.auth && config.auth.enabled) {
+      const authenticated = await isLoggedIn(page);
+      if (!authenticated) {
+          console.log('[Crawler] User not logged in. Initiating login flow...');
+          const success = await performLogin(page, config.auth.username, config.auth.password);
+          if (!success) {
+              console.error('[Crawler] Critical: Login failed. Continuing in guest mode...');
+          }
+      } else {
+          console.log('[Crawler] Session detected. No login required.');
+      }
+  }
 
   // Quick startup message (can disable if too spammy)
   await sendSystemMessage(`🟢 Upwork Monitor Started\nWatching ${config.searchUrls.length} search URL(s)`);
@@ -89,7 +104,32 @@ async function startCrawler()
 
               await simulateHumanBehavior(page);
 
-              const deepData = await scrapeDeepJobDetails(page);
+              let deepData = await scrapeDeepJobDetails(page);
+
+              // 2. Logic for Unknown Location / Private Listings
+              if (deepData && deepData.location === 'Unknown')
+              {
+                if (deepData.isPrivate)
+                {
+                  deepData.location = 'Private Listing';
+                } else
+                {
+                  console.log(`[Crawler] Location unknown for ${job.jobId}. Retrying with revisit...`);
+                  await delay(5000); // 5s buffer
+                  await page.goto(job.url, { waitUntil: 'domcontentloaded', timeout: 45000 });
+                  await simulateHumanBehavior(page);
+                  const retryData = await scrapeDeepJobDetails(page);
+                  if (retryData)
+                  {
+                    deepData = retryData;
+                    if (deepData.location === 'Unknown')
+                    {
+                      deepData.location = 'Unknown | Login Required';
+                    }
+                  }
+                }
+              }
+
               if (deepData)
               {
                 if (deepData.location !== 'Unknown') job.location = deepData.location;

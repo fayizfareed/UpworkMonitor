@@ -29,5 +29,10 @@
       "Bangladesh",
       "India"
     ]
+  },
+  "auth": {
+    "enabled": false,
+    "username": "YOUR_UPWORK_USERNAME",
+    "password": "YOUR_UPWORK_PASSWORD"
   }
 }

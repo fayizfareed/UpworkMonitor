@@ -153,6 +153,7 @@ async function scrapeDeepJobDetails(page) {
     let currentTime = 'Unknown';
     let paymentVerified = '❌';
     let phoneVerified = '❌';
+    let isPrivate = window.location.href.includes('/freelance-jobs/apply/') || window.location.href.includes('/apply/');
 
     // 1. Location
     const locEl = document.querySelector('[data-qa="client-location"], [data-test="client-country"], [data-ui-cmp="client-location"]');
@@ -174,6 +175,10 @@ async function scrapeDeepJobDetails(page) {
     // 2. Compact text retrieval for resilient regex (preserves spaces, kills newlines)
     const rawText = document.body ? document.body.textContent : '';
     const compactText = rawText.replace(/[\n\r]+/g, ' ').replace(/\s{2,}/g, ' ');
+
+    if (!isPrivate && (compactText.toLowerCase().includes('private listing') || compactText.toLowerCase().includes('job is private'))) {
+      isPrivate = true;
+    }
 
     // Proposals
     const pMatch = compactText.match(/Proposals:?\s*(Less than \d+|\d+ to \d+|\d+\+|\d+)/i);
@@ -246,7 +251,8 @@ async function scrapeDeepJobDetails(page) {
       unansweredInvites,
       currentTime,
       paymentVerified,
-      phoneVerified
+      phoneVerified,
+      isPrivate
     };
   });
 
