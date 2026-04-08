@@ -82,30 +82,42 @@ async function startCrawler()
             // Human delay before clicking into a job detail page to avoid triggering firewalls
             await randomDelay(3, 6);
             console.log(`[Crawler] Deep crawling Job Details: ${job.url}`);
-            
-            try {
+
+            try
+            {
               await page.goto(job.url, { waitUntil: 'domcontentloaded', timeout: 45000 });
-              
-              await simulateHumanBehavior(page);
-              
+
+              // await simulateHumanBehavior(page);
+
               const deepData = await scrapeDeepJobDetails(page);
-              if (deepData) {
-                 if (deepData.location !== 'Unknown') job.location = deepData.location;
-                 job.proposals = deepData.proposals !== 'Unknown' ? deepData.proposals : job.proposals;
-                 job.hireRate = deepData.hireRate;
-                 job.joinedDate = deepData.joinedDate;
-                 job.businessType = deepData.businessType;
-                 job.avgHourlyRate = deepData.avgHourlyRate;
-                 job.jobsPosted = deepData.jobsPosted;
-                 job.activeJobs = deepData.activeJobs;
-                 job.totalHires = deepData.totalHires;
+              if (deepData)
+              {
+                if (deepData.location !== 'Unknown') job.location = deepData.location;
+                job.proposals = deepData.proposals !== 'Unknown' ? deepData.proposals : job.proposals;
+                job.hireRate = deepData.hireRate;
+                job.joinedDate = deepData.joinedDate;
+                job.businessType = deepData.businessType;
+                job.avgHourlyRate = deepData.avgHourlyRate;
+                job.jobsPosted = deepData.jobsPosted;
+                job.activeJobs = deepData.activeJobs;
+                job.totalHires = deepData.totalHires;
+
+                job.lastViewed = deepData.lastViewed;
+                job.interviewing = deepData.interviewing;
+                job.invitesSent = deepData.invitesSent;
+                job.unansweredInvites = deepData.unansweredInvites;
+                job.currentTime = deepData.currentTime;
+                job.paymentVerified = deepData.paymentVerified;
+                job.phoneVerified = deepData.phoneVerified;
               }
 
-              if (isCountryExcluded(job.location)) {
+              if (isCountryExcluded(job.location))
+              {
                 console.log(`[Filter] Ignored Job ${job.jobId} -> Excluded country: ${job.location}`);
                 continue; // Skip the notification since it matches the filter
               }
-            } catch (err) {
+            } catch (err)
+            {
               console.log(`[Crawler] Warning: Failed to deep scrape job ${job.jobId}: ${err.message}`);
               // Fallback to sending what we have
             }

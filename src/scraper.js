@@ -129,7 +129,6 @@ async function scrapeJobsOnPage(page) {
  */
 async function scrapeDeepJobDetails(page) {
   try {
-    // Wait for at least some client history to load, but don't fail immediately if it isn't there
     await page.waitForSelector('[data-qa="client-location"], .client-about-box, [data-qa="client-info"]', { timeout: 8000 });
   } catch (err) {
     console.log('[Scraper] Deep Location timeout. Relying on generic extraction.');
@@ -145,18 +144,26 @@ async function scrapeDeepJobDetails(page) {
     let jobsPosted = 'Unknown';
     let activeJobs = 'Unknown';
     let totalHires = 'Unknown';
+    
+    // New Attributes
+    let lastViewed = 'Unknown';
+    let interviewing = 'Unknown';
+    let invitesSent = 'Unknown';
+    let unansweredInvites = 'Unknown';
+    let currentTime = 'Unknown';
+    let paymentVerified = '❌';
+    let phoneVerified = '❌';
 
     // 1. Location
-    const locEl = document.querySelector('[data-qa="client-location"] strong, [data-test="client-country"], [data-ui-cmp="client-location"]');
+    const locEl = document.querySelector('[data-qa="client-location"], [data-test="client-country"], [data-ui-cmp="client-location"]');
     if (locEl) {
-      location = locEl.innerText.trim();
+      location = locEl.innerText.replace(/[\n\r]+/g, ' ').trim();
     } else {
-      // Fallback
       const clientBox = document.querySelector('[data-qa="client-info"], [data-test="client-info"]');
       if (clientBox) {
         const lis = clientBox.querySelectorAll('ul li');
         for (const li of lis) {
-          if (li.innerText && li.innerText.length < 50 && !li.innerText.toLowerCase().includes('member since')) {
+          if (li.innerText && li.innerText.length < 50 && !li.textContent.toLowerCase().includes('member since')) {
              const s = li.querySelector('strong');
              if (s) location = s.innerText.trim();
           }
@@ -164,34 +171,64 @@ async function scrapeDeepJobDetails(page) {
       }
     }
 
-    // 2. Scan entire document body text for reliable heuristics since Upwork changes tags frequently
-    const bodyText = document.body.innerText || '';
+    // 2. Compact text retrieval for resilient regex (preserves spaces, kills newlines)
+    const rawText = document.body ? document.body.textContent : '';
+    const compactText = rawText.replace(/[\n\r]+/g, ' ').replace(/\s{2,}/g, ' ');
 
     // Proposals
-    const pMatch = bodyText.match(/Proposals:[ \t]*([^\n]+)/i);
+    const pMatch = compactText.match(/Proposals:?\s*(Less than \d+|\d+ to \d+|\d+\+|\d+)/i);
     if (pMatch) proposals = pMatch[1].trim();
 
     // Client Info Heuristics
-    const memberMatch = bodyText.match(/Member since (.+)/i);
+    const memberMatch = compactText.match(/Member since (.+?)(?=\s|$)/i);
     if (memberMatch) joinedDate = memberMatch[1].trim();
 
-    const hireRateMatch = bodyText.match(/(\d+%)\s*hire rate/i);
+    const hireRateMatch = compactText.match(/(\d+%)\s*hire rate/i);
     if (hireRateMatch) hireRate = hireRateMatch[1];
 
-    const bizMatch = bodyText.match(/(Small business|Large company|Mid-sized company)[^\n]*/i);
+    const bizMatch = compactText.match(/(Small business|Large company|Mid-sized company)/i);
     if (bizMatch) businessType = bizMatch[0].trim();
 
-    const avgMatch = bodyText.match(/(\$[0-9,.]+(?:\/hr)?)\s*avg hourly rate/i);
+    const avgMatch = compactText.match(/(\$[0-9,.]+(?:\/hr)?)\s*avg hourly rate/i);
     if (avgMatch) avgHourlyRate = avgMatch[1];
 
-    const postedMatch = bodyText.match(/(\d+)\s*jobs posted/i);
+    const postedMatch = compactText.match(/(\d+)\s*job[s]? posted/i);
     if (postedMatch) jobsPosted = postedMatch[1];
 
-    const openMatch = bodyText.match(/(\d+)\s*(open|active)\s*job/i);
+    const openMatch = compactText.match(/(\d+)\s*(open|active)\s*job/i);
     if (openMatch) activeJobs = openMatch[1];
 
-    const hiresMatch = bodyText.match(/(?:Total hires\s*)?(\d+)\s*hire/i);
+    const hiresMatch = compactText.match(/(?:Total hires\s*)?(\d+)\s*hire/i);
     if (hiresMatch) totalHires = hiresMatch[1];
+
+    // Activity
+    const viewMatch = compactText.match(/Last viewed by client:?\s*(.{1,30}ago|yesterday)/i);
+    if (viewMatch) lastViewed = viewMatch[1].trim();
+
+    const ivMatch = compactText.match(/Interviewing:?\s*(\d+)/i);
+    if (ivMatch) interviewing = ivMatch[1];
+
+    const isMatch = compactText.match(/Invites sent:?\s*(\d+)/i);
+    if (isMatch) invitesSent = isMatch[1];
+
+    const uiMatch = compactText.match(/Unanswered invites:?\s*(\d+)/i);
+    if (uiMatch) unansweredInvites = uiMatch[1];
+
+    // Verification
+    if (/payment(?: method)? verified/i.test(compactText)) paymentVerified = '✅';
+    if (/phone(?: number)? verified/i.test(compactText)) phoneVerified = '✅';
+
+    // Current Time
+    // Tries to look for common 12-hour AM/PM formats in the client info section
+    const timeMatch = compactText.match(/(\d{1,2}:\d{2}\s*(?:AM|PM))/i);
+    if (timeMatch) currentTime = timeMatch[1];
+
+    // Fix Troy 8:43 PM logic by extracting a few words before the AM/PM
+    const fullTimeMatch = compactText.match(/([a-zA-Z]+\s+\d{1,2}:\d{2}\s*(?:AM|PM))/i);
+    if (fullTimeMatch) {
+       // if it caught "Troy 8:43 PM" instead of just "8:43 PM", let's use it
+       currentTime = fullTimeMatch[1].trim();
+    }
 
     return {
       location,
@@ -202,7 +239,14 @@ async function scrapeDeepJobDetails(page) {
       avgHourlyRate,
       jobsPosted,
       activeJobs,
-      totalHires
+      totalHires,
+      lastViewed,
+      interviewing,
+      invitesSent,
+      unansweredInvites,
+      currentTime,
+      paymentVerified,
+      phoneVerified
     };
   });
 
