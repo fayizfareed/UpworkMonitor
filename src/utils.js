@@ -47,38 +47,56 @@ function calculateNextInterval(baseIntervalSeconds, randomFactor) {
 }
 
 /**
- * Generates human-like movements and scrolling on a Puppeteer page.
- * Avoids rigid, programmatic sequences.
+ * Smoothly scrolls to a random position on the page based on step limits.
  */
-async function simulateHumanBehavior(page) {
-  // 1. Random mouse movement
+async function randomScroll(page, stepSize = 50, delayMs = 50) {
   try {
-    const x = getRandomInt(100, 800);
-    const y = getRandomInt(100, 600);
-    const steps = getRandomInt(10, 30);
-    await page.mouse.move(x, y, { steps });
-    await randomDelay(0.5, 1.5);
-  } catch (err) {
-    // Ignore mouse errors, could occur if target is missing
-  }
+    const scrollHeight = await page.evaluate(() => document.body.scrollHeight);
+    let currentScroll = await page.evaluate(() => window.scrollY);
+    const targetScroll = getRandomInt(0, scrollHeight);
 
-  // 2. Random scrolling (partial or full)
-  try {
-    const scrolls = getRandomInt(1, 3);
-    for (let i = 0; i < scrolls; i++) {
-      const scrollAmount = getRandomInt(200, 800);
-      const direction = Math.random() > 0.3 ? 1 : -1; // 70% chance to scroll down
-      await page.mouse.wheel({ deltaY: scrollAmount * direction });
-      await randomDelay(1, 3);
+    const direction = targetScroll > currentScroll ? 1 : -1;
+    while (Math.abs(targetScroll - currentScroll) > stepSize) {
+      currentScroll += direction * stepSize;
+      await page.evaluate((y) => window.scrollTo(0, y), currentScroll);
+      await delay(delayMs);
     }
-  } catch (err) {}
-
-  // 3. Occasional idle pause mimicking reading or tab switching
-  if (Math.random() < 0.2) {
-    const pauseTime = getRandomInt(5, 15);
-    console.log(`[Human Behavior] Idle pause for ${pauseTime}s on the page...`);
-    await delay(pauseTime * 1000);
+    
+    await page.evaluate((y) => window.scrollTo(0, y), targetScroll);
+  } catch (err) {
+    // page target might be gone
   }
+}
+
+/**
+ * Randomly moves the mouse cursor across the current viewport.
+ */
+async function randomMouseMovement(page) {
+  try {
+    const viewport = await page.evaluate(() => ({
+      width: window.innerWidth,
+      height: window.innerHeight
+    }));
+
+    const x = getRandomInt(0, viewport.width);
+    const y = getRandomInt(0, viewport.height);
+    const steps = getRandomInt(5, 30);
+
+    await page.mouse.move(x, y, { steps });
+  } catch (err) {
+    // ignore
+  }
+}
+
+/**
+ * Executes a sequence of human-like behavior (wait, scroll, move).
+ */
+async function simulateHumanBehavior(page, minSeconds = 2, maxSeconds = 10) {
+  const delaySec = getRandomFloat(minSeconds, maxSeconds);
+  await delay(delaySec * 1000);
+  
+  await randomScroll(page);
+  await randomMouseMovement(page);
 }
 
 module.exports = {

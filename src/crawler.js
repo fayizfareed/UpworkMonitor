@@ -87,7 +87,7 @@ async function startCrawler()
             {
               await page.goto(job.url, { waitUntil: 'domcontentloaded', timeout: 45000 });
 
-              // await simulateHumanBehavior(page);
+              await simulateHumanBehavior(page);
 
               const deepData = await scrapeDeepJobDetails(page);
               if (deepData)
