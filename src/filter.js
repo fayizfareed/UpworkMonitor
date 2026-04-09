@@ -219,6 +219,20 @@ function applyDeepFilters(job)
     }
   }
 
+  // Business Type Filter
+  const { excludeBusinessTypes } = config.filters;
+  if (excludeBusinessTypes && Array.isArray(excludeBusinessTypes) && excludeBusinessTypes.length > 0)
+  {
+    const businessType = (job.businessType || '').toLowerCase().trim();
+    const isExcluded = excludeBusinessTypes.some(type => type.toLowerCase().trim() === businessType);
+
+    if (isExcluded)
+    {
+      console.log(`[Filter] Ignored job ${job.jobId} -> Business type "${job.businessType}" is excluded.`);
+      return false;
+    }
+  }
+
   return true;
 }
 
