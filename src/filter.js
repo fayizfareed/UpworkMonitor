@@ -84,26 +84,29 @@ function applyCustomFilters(jobs)
       return true;
     }
 
-    const isHourly = job.type === 'Hourly' || job.budget.toLowerCase().includes('/ hr');
+    const isHourly = job.type === 'Hourly' || job.budget.toLowerCase().includes('/ hr') || job.budget.toLowerCase().includes('/hr');
     const isFixed = job.type === 'Fixed-price' || (!isHourly && job.budget.includes('$'));
 
     // Extract all numbers from the budget string (e.g. "$20.00 - $50.00" -> [20, 50])
-    const matches = job.budget.match(/[\d,.]+[kKmM]?/g);
+    const matches = job.budget.match(/[\d.]+[kKmM]?/g);
     if (!matches)
     {
       return true; // Unparseable budget string, play it safe
     }
 
     // Convert string numbers to float, ignoring commas, and handling 'k' or 'm'
-    const numbers = matches.map(str =>
-    {
+    let numbers = [];
+    for (const str of matches) {
+      if (str === '.') continue; // ignore standalone dots
       const lower = str.toLowerCase();
       let val = parseFloat(lower.replace(/,/g, '').replace(/[km]/g, ''));
-      if (isNaN(val)) return 0;
+      if (isNaN(val)) continue;
       if (lower.includes('k')) val *= 1000;
       if (lower.includes('m')) val *= 1000000;
-      return val;
-    });
+      numbers.push(val);
+    }
+    
+    if (numbers.length === 0) return true;
 
     // Using the MAXIMUM value in the range to determine if the client is willing to meet the minimum limit
     const offerToCheck = Math.max(...numbers);
