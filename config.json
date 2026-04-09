@@ -8,31 +8,11 @@
   "debug": false,
   "filters": {
     "minFixedPrice": 2500,
-    "minHourlyRate": 25,
-    "excludeKeywords": [
-      "wordpress",
-      "shopify",
-      "woocommerce",
-      "react native",
-      "UI/UX Designer",
-      "Next.js Developer",
-      "Django",
-      "Monday.com",
-      "Supabase",
-      "Framer Website",
-      "Drupal Developer",
-      "GHL",
-      "Figma UX Designer"
-    ],
-    "excludeCountries": [
-      "Pakistan",
-      "Bangladesh",
-      "India"
-    ]
+    "minHourlyRate": 25
   },
   "auth": {
-    "enabled": false,
-    "username": "YOUR_UPWORK_USERNAME",
-    "password": "YOUR_UPWORK_PASSWORD"
+    "enabled": true,
+    "username": "mehdihisham@outlook.com",
+    "password": "Mehdi@Hisham_1"
   }
 }

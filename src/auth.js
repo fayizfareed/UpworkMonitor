@@ -26,6 +26,31 @@ async function isLoggedIn(page) {
     }
 }
 
+async function removeOverlays(page) {
+    try {
+        await page.evaluate(() => {
+            const selectors = [
+                '#onetrust-consent-sdk', 
+                '.onetrust-pc-dark-filter', 
+                '[id^="teconsent"]',
+                '.up-cookie-banner',
+                '.cookie-banner',
+                '[data-test="cookie-banner"]',
+                'div[style*="z-index: 2147483647"]', // common high z-index overlays
+                'iframe[title*="cookie"]'
+            ];
+            selectors.forEach(selector => {
+                document.querySelectorAll(selector).forEach(el => el.remove());
+            });
+            document.body.style.overflow = 'auto';
+            document.body.style.position = 'static';
+        });
+        console.log('[Auth] Overlays cleared.');
+    } catch (err) {
+        console.log('[Auth] Warning: Could not clear overlays:', err.message);
+    }
+}
+
 /**
  * Performs the Upwork login flow.
  * @param {import('puppeteer').Page} page 
@@ -38,6 +63,9 @@ async function performLogin(page, username, password) {
     // 1. Navigate to login page
     await page.goto('https://www.upwork.com/ab/account-security/login', { waitUntil: 'domcontentloaded', timeout: 60000 });
     await randomDelay(2, 4);
+
+    // Remove any cookie consent overlays or modals that could intercept clicks
+    await removeOverlays(page);
     
     // Check if already logged in (sometimes it redirects automatically)
     if (await isLoggedIn(page)) {

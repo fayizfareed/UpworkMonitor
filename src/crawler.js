@@ -106,33 +106,8 @@ async function startCrawler()
 
               let deepData = await scrapeDeepJobDetails(page);
 
-              // 2. Logic for Unknown Location / Private Listings
-              if (deepData && deepData.location === 'Unknown')
-              {
-                if (deepData.isPrivate)
-                {
-                  deepData.location = 'Private Listing';
-                } else
-                {
-                  console.log(`[Crawler] Location unknown for ${job.jobId}. Retrying with revisit...`);
-                  await delay(5000); // 5s buffer
-                  await page.goto(job.url, { waitUntil: 'domcontentloaded', timeout: 45000 });
-                  await simulateHumanBehavior(page);
-                  const retryData = await scrapeDeepJobDetails(page);
-                  if (retryData)
-                  {
-                    deepData = retryData;
-                    if (deepData.location === 'Unknown')
-                    {
-                      deepData.location = 'Unknown | Login Required';
-                    }
-                  }
-                }
-              }
-
               if (deepData)
               {
-                if (deepData.location !== 'Unknown') job.location = deepData.location;
                 job.proposals = deepData.proposals !== 'Unknown' ? deepData.proposals : job.proposals;
                 job.hireRate = deepData.hireRate;
                 job.joinedDate = deepData.joinedDate;
@@ -149,12 +124,6 @@ async function startCrawler()
                 job.currentTime = deepData.currentTime;
                 job.paymentVerified = deepData.paymentVerified;
                 job.phoneVerified = deepData.phoneVerified;
-              }
-
-              if (isCountryExcluded(job.location))
-              {
-                console.log(`[Filter] Ignored Job ${job.jobId} -> Excluded country: ${job.location}`);
-                continue; // Skip the notification since it matches the filter
               }
             } catch (err)
             {

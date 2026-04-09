@@ -54,40 +54,72 @@ async function scrapeJobsOnPage(page) {
 
       // 3. Type & Budget
       let type = 'Unknown';
-      const jobTypeEl = el.querySelector('[data-test="job-type"]');
-      if (jobTypeEl) {
-         type = jobTypeEl.innerText.trim();
+      let budget = 'Not Specified';
+
+      // Use the explicit job-type-label from the logged-in HTML format
+      const jobTypeLabelEl = el.querySelector('[data-test="job-type-label"], [data-test="job-type"]');
+      if (jobTypeLabelEl) {
+         let fullText = jobTypeLabelEl.innerText.trim().replace(/\n/g, ' ');
+         if (/Hourly/i.test(fullText)) {
+            type = 'Hourly';
+            // Extract the budget part after "Hourly: "
+            const hMatch = fullText.match(/Hourly:?\s*(.*)/i);
+            if (hMatch) {
+               budget = hMatch[1].trim();
+            } else {
+               const bMatch = fullText.match(/(\$[0-9,.]+[kKmM]?(?:\+)?(?:\s*-\s*\$[0-9,.]+[kKmM]?)?)/i);
+               if (bMatch) budget = bMatch[1].trim();
+            }
+         } else if (/Fixed[-\s]price/i.test(fullText)) {
+            type = 'Fixed-price';
+            const bMatch = fullText.match(/(\$[0-9,.]+[kKmM]?(?:\+)?(?:\s*-\s*\$[0-9,.]+[kKmM]?)?)/i);
+            if (bMatch) budget = bMatch[1].trim();
+         }
       } else {
+         // Fallback logic for unauthenticated or alternative views
          if (/Hourly/i.test(inlineText)) type = 'Hourly';
          else if (/Fixed[-\s]price/i.test(inlineText)) type = 'Fixed-price';
-      }
 
-      let budget = 'Not Specified';
-      const budgetMatch = inlineText.match(/(\$[0-9,.]+(?:\+)?(?:\s*-\s*\$[0-9,.]+)?(?: \/ hr)?)/i);
-      if (budgetMatch) {
-         budget = budgetMatch[1];
+         const budgetMatch = inlineText.match(/(\$[0-9,.]+[kKmM]?(?:\+)?(?:\s*-\s*\$[0-9,.]+[kKmM]?)?(?: \/ hr)?)/i);
+         if (budgetMatch) {
+            budget = budgetMatch[1].trim();
+         }
       }
 
       // 4. Proposals
       let proposals = 'Unknown';
       const propTierEl = el.querySelector('[data-test="proposals-tier"], [data-test="proposals"]');
       if (propTierEl) {
-         proposals = propTierEl.innerText.trim();
+         proposals = propTierEl.innerText.replace(/^Proposals:?\s*/i, '').trim();
       } else {
          const pMatch = inlineText.match(/Proposals:?\s*(Less than \d+|\d+ to \d+|\d+\+|\d+)/i);
-         if (pMatch) proposals = pMatch[1];
+         if (pMatch) proposals = pMatch[1].trim();
       }
 
       // 5. Location
       let location = 'Unknown';
       const locEl = el.querySelector('[data-test="client-country"], [data-test="client-location"], [data-test="location"]');
       if (locEl) {
-         location = locEl.innerText.trim();
+         let rawLocation = locEl.innerText.trim();
+         // If the inner text contains something like "Location\nAustralia", extract just the country
+         const parts = rawLocation.split('\n');
+         location = parts[parts.length - 1].trim();
       } else {
          // Upwork often places country at the end, but without a selector it's risky to guess. We'll leave as Unknown if not matched.
       }
 
-      // 5. Description (heuristics: look for specific data-test, classes, or get the longest text block)
+      // 6. Payment Verified
+      let paymentVerified = '❌';
+      const paymentEl = el.querySelector('[data-test="payment-verification-status"]');
+      if (paymentEl) {
+        if (/verified/i.test(paymentEl.innerText) && !/unverified/i.test(paymentEl.innerText)) {
+          paymentVerified = '✅';
+        }
+      } else if (/payment(?: method)? verified/i.test(inlineText)) {
+        paymentVerified = '✅';
+      }
+
+      // 7. Description (heuristics: look for specific data-test, classes, or get the longest text block)
       let description = '';
       const descEl = el.querySelector('[data-test="job-description-text"], [data-test="UpCLineClamp"], .up-line-clamp-v2, .job-description-text');
       if (descEl) {
@@ -113,7 +145,7 @@ async function scrapeJobsOnPage(page) {
         description = description.substring(0, 300) + '...';
       }
 
-      results.push({ jobId, title, url, type, budget, proposals, location, description });
+      results.push({ jobId, title, url, type, budget, proposals, location, paymentVerified, description });
     }
 
     return results;
