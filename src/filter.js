@@ -199,9 +199,9 @@ function applyDeepFilters(job)
     const unanswered = parseInt(job.unansweredInvites, 10) || 0;
     const interviewing = parseInt(job.interviewing, 10) || 0;
 
-    if (invitesSent > 0 && (unanswered + interviewing) >= invitesSent)
+    if (invitesSent > 0 && (unanswered + interviewing) <= invitesSent)
     {
-      console.log(`[Filter] Ignored job ${job.jobId} -> All ${invitesSent} invites are already accounted for (Interviewing: ${interviewing}, Unanswered: ${unanswered}).`);
+      console.log(`[Filter] Ignored job ${job.jobId} -> Job has sent ${invitesSent} invites (Interviewing: ${interviewing}, Unanswered: ${unanswered}).`);
       return false;
     }
   }
