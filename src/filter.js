@@ -192,6 +192,20 @@ function applyDeepFilters(job)
     }
   }
 
+  // Invitation-based Filter: skip if all invites are accounted for (unanswered + interviewing)
+  if (config.filters.skipFullInvites)
+  {
+    const invitesSent = parseInt(job.invitesSent, 10) || 0;
+    const unanswered = parseInt(job.unansweredInvites, 10) || 0;
+    const interviewing = parseInt(job.interviewing, 10) || 0;
+
+    if (invitesSent > 0 && (unanswered + interviewing) >= invitesSent)
+    {
+      console.log(`[Filter] Ignored job ${job.jobId} -> All ${invitesSent} invites are already accounted for (Interviewing: ${interviewing}, Unanswered: ${unanswered}).`);
+      return false;
+    }
+  }
+
   return true;
 }
 
