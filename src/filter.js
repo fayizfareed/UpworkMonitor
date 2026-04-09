@@ -207,6 +207,18 @@ function applyDeepFilters(job)
     }
   }
 
+  // Interviewing Filter: skip if client is already interviewing too many people
+  const { maxInterviewing } = config.filters;
+  if (typeof maxInterviewing === 'number')
+  {
+    const interviewing = parseInt(job.interviewing, 10) || 0;
+    if (interviewing >= maxInterviewing)
+    {
+      console.log(`[Filter] Ignored job ${job.jobId} -> Client is interviewing ${interviewing} people (Max Allowed: ${maxInterviewing}).`);
+      return false;
+    }
+  }
+
   return true;
 }
 
