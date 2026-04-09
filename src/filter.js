@@ -192,16 +192,17 @@ function applyDeepFilters(job)
     }
   }
 
-  // Invitation-based Filter: skip if all invites are accounted for (unanswered + interviewing)
-  if (config.filters.skipFullInvites)
+  // Invitation-based Filter: skip if invites sent exceed configured limit
+  const { maxInvitesSent } = config.filters;
+  if (typeof maxInvitesSent === 'number')
   {
     const invitesSent = parseInt(job.invitesSent, 10) || 0;
     const unanswered = parseInt(job.unansweredInvites, 10) || 0;
     const interviewing = parseInt(job.interviewing, 10) || 0;
 
-    if (invitesSent > 0 && (unanswered + interviewing) <= invitesSent)
+    if (invitesSent >= maxInvitesSent && (unanswered + interviewing) <= invitesSent)
     {
-      console.log(`[Filter] Ignored job ${job.jobId} -> Job has sent ${invitesSent} invites (Interviewing: ${interviewing}, Unanswered: ${unanswered}).`);
+      console.log(`[Filter] Ignored job ${job.jobId} -> Job has sent ${invitesSent} invites (Max Allowed: ${maxInvitesSent}).`);
       return false;
     }
   }

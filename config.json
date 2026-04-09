@@ -13,7 +13,7 @@
     "maxProposals": 20,
     "minRating": 3.5,
     "minHireRate": 90,
-    "skipFullInvites": true,
+    "maxInvitesSent": 2,
     "excludeKeywords": [
       "wordpress",
       "shopify",
