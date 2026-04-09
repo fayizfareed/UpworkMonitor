@@ -36,14 +36,28 @@ async function startCrawler()
   // Start with a login check
   if (config.auth && config.auth.enabled)
   {
-    const authenticated = await isLoggedIn(page);
+    let authenticated = await isLoggedIn(page);
     if (!authenticated)
     {
-      console.log('[Crawler] User not logged in. Initiating login flow...');
-      const success = await performLogin(page, config.auth.username, config.auth.password);
-      if (!success)
+      const maxRetries = 2;
+      let attempt = 0;
+      while (attempt <= maxRetries && !authenticated)
       {
-        console.error('[Crawler] Critical: Login failed. Continuing in guest mode...');
+        attempt++;
+        console.log(`[Crawler] User not logged in. Initiating login attempt ${attempt}...`);
+        await performLogin(page, config.auth.username, config.auth.password);
+        
+        // Re-verify login status after attempt
+        authenticated = await isLoggedIn(page);
+        
+        if (authenticated) {
+          console.log('[Crawler] Login successful!');
+        } else if (attempt <= maxRetries) {
+          console.log(`[Crawler] Login attempt ${attempt} failed. Waiting before retry...`);
+          await randomDelay(10, 20); // Increased wait before retry
+        } else {
+          console.error('[Crawler] All login attempts failed. Continuing in guest mode...');
+        }
       }
     } else
     {

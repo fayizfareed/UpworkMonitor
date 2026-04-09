@@ -76,17 +76,34 @@ function calculateNextInterval(baseIntervalSeconds, randomFactor, schedules = []
 /**
  * Smoothly scrolls to a random position on the page based on step limits.
  */
-async function randomScroll(page, stepSize = 50, delayMs = 50) {
+async function randomScroll(page, stepSize = 30, delayMs = 150) {
   try {
     const scrollHeight = await page.evaluate(() => document.body.scrollHeight);
     let currentScroll = await page.evaluate(() => window.scrollY);
-    const targetScroll = getRandomInt(0, scrollHeight);
+    
+    // Don't always scroll to a completely random spot, often just a bit up/down
+    const currentY = await page.evaluate(() => window.scrollY);
+    const viewPortHeight = await page.evaluate(() => window.innerHeight);
+    
+    // 70% chance to just scroll a bit, 30% chance for a long jump
+    let targetScroll;
+    if (Math.random() > 0.3) {
+        const offset = getRandomInt(100, viewPortHeight);
+        targetScroll = Math.max(0, Math.min(scrollHeight, currentY + (Math.random() > 0.5 ? offset : -offset)));
+    } else {
+        targetScroll = getRandomInt(0, scrollHeight);
+    }
 
     const direction = targetScroll > currentScroll ? 1 : -1;
     while (Math.abs(targetScroll - currentScroll) > stepSize) {
-      currentScroll += direction * stepSize;
+      // Add slight jitter to step size for human feel
+      const jitterStep = stepSize + getRandomInt(-10, 10);
+      currentScroll += direction * Math.max(5, jitterStep);
+      
       await page.evaluate((y) => window.scrollTo(0, y), currentScroll);
-      await delay(delayMs);
+      
+      // Add slight variation to delay
+      await delay(delayMs + getRandomInt(-50, 50));
     }
     
     await page.evaluate((y) => window.scrollTo(0, y), targetScroll);
