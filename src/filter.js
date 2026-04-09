@@ -95,14 +95,14 @@ function applyCustomFilters(jobs)
       return val;
     });
 
-    // Using the MINIMUM value in the range to strictly ensure they meet the minimum limit criteria
-    const offerToCheck = Math.min(...numbers);
+    // Using the MAXIMUM value in the range to determine if the client is willing to meet the minimum limit
+    const offerToCheck = Math.max(...numbers);
 
     if (isHourly && minHourlyRate)
     {
       if (offerToCheck < minHourlyRate)
       {
-        console.log(`[Filter] Ignored job ${job.jobId} -> Guaranteed hourly rate floor ($${offerToCheck}) is under your limit ($${minHourlyRate})`);
+        console.log(`[Filter] Ignored job ${job.jobId} -> Hourly rate max offer ($${offerToCheck}) is under your limit ($${minHourlyRate})`);
         return false;
       }
     }

@@ -86,6 +86,15 @@ async function scrapeJobsOnPage(page) {
          }
       }
 
+      // If budget was not inside the job-type-label (which happens with Fixed price logged-in jobs)
+      if (budget === 'Not Specified' || !budget) {
+         const explicitBudgetEl = el.querySelector('[data-test="is-fixed-price"], [data-test="budget"], [data-test="duration"]');
+         if (explicitBudgetEl) {
+             const bMatch = explicitBudgetEl.innerText.match(/(\$[0-9,.]+[kKmM]?(?:\+)?(?:\s*-\s*\$[0-9,.]+[kKmM]?)?)/i);
+             if (bMatch) budget = bMatch[1].trim();
+         }
+      }
+
       // 4. Proposals
       let proposals = 'Unknown';
       const propTierEl = el.querySelector('[data-test="proposals-tier"], [data-test="proposals"]');
