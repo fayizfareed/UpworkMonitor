@@ -7,12 +7,31 @@
   "headless": false,
   "debug": false,
   "filters": {
-    "minFixedPrice": null,
-    "minHourlyRate": 25,
-    "excludeKeywords": [],
     "requirePaymentVerified": false,
-    "maxProposals": 5,
-    "minRating": 4
+    "minFixedPrice": 2500,
+    "minHourlyRate": 25,
+    "maxProposals": 20,
+    "minRating": 3.5,
+    "excludeKeywords": [
+      "wordpress",
+      "shopify",
+      "woocommerce",
+      "react native",
+      "UI/UX Designer",
+      "Next.js Developer",
+      "Django",
+      "Monday.com",
+      "Supabase",
+      "Framer Website",
+      "Drupal Developer",
+      "GHL",
+      "Figma UX Designer"
+    ],
+    "excludeCountries": [
+      "Pakistan",
+      "Bangladesh",
+      "India"
+    ]
   },
   "auth": {
     "enabled": true,
