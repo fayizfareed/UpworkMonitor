@@ -353,23 +353,24 @@ async function scrapeDeepJobDetails(page)
     }
 
     let requiredConnects = 'Unknown';
-    // Use querySelector to reliably find elements avoiding spatial formatting bugs
-    const strongTags = document.querySelectorAll('strong');
-    for (const tag of strongTags) {
-      if (tag.innerText && tag.innerText.match(/(\d+)\s*Connects?/i)) {
-        // Prevent matching "Available Connects: 330"
-        const parentContext = tag.parentElement ? tag.parentElement.innerText.toLowerCase() : '';
-        if (!parentContext.includes('available')) {
-          const match = tag.innerText.match(/(\d+)/);
-          if (match) {
-            requiredConnects = match[1];
-            break;
-          }
-        }
+    // Use querySelectorAll on common text wrappers since Upwork sometimes drops the <strong> tag
+    const textWrappers = document.querySelectorAll('div, span, p');
+    for (const el of textWrappers) {
+      if (!el.innerText || el.children.length > 3) continue; // Skip huge containers
+      
+      const txt = el.innerText.replace(/\s+/g, ' ').trim(); // Normalize visual spaces safely
+      
+      const match = txt.match(/Send a proposal for:\s*(\d+)/i) ||
+                    txt.match(/Cost to apply:\s*(\d+)/i) ||
+                    txt.match(/(\d+)\s*required\s*Connects/i);
+                    
+      if (match) {
+        requiredConnects = match[1];
+        break;
       }
     }
 
-    // Fallback regex approach if not wrapped in <strong>
+    // Fallback regex approach on the entire flat body
     if (requiredConnects === 'Unknown') {
       const safeText = document.body.innerText || '';
       const propMatch = safeText.match(/(?:proposal|apply).*?(\d+)\s*Connects?/i) ||

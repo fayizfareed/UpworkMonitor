@@ -124,6 +124,8 @@ async function startCrawler()
                 job.currentTime = deepData.currentTime;
                 job.paymentVerified = deepData.paymentVerified;
                 job.phoneVerified = deepData.phoneVerified;
+                job.requiredConnects = deepData.requiredConnects;
+                job.preferredQualifications = deepData.preferredQualifications;
               }
             } catch (err)
             {
