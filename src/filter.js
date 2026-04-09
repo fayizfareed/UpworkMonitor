@@ -9,7 +9,7 @@ function applyCustomFilters(jobs)
 {
   if (!config.filters) return jobs;
 
-  const { minFixedPrice, minHourlyRate, excludeKeywords, requirePaymentVerified, maxProposals } = config.filters;
+  const { minFixedPrice, minHourlyRate, excludeKeywords, requirePaymentVerified, maxProposals, minRating } = config.filters;
 
   return jobs.filter(job =>
   {
@@ -64,6 +64,16 @@ function applyCustomFilters(jobs)
       if (lowerBound >= maxProposals)
       {
         console.log(`[Filter] Ignored job ${job.jobId} -> Proposals (${job.proposals}) exceed configured limit of ${maxProposals}.`);
+        return false;
+      }
+    }
+
+    // 5. Rating Filter
+    if (typeof minRating === 'number' && minRating > 0 && typeof job.rating === 'number')
+    {
+      if (job.rating > 0 && job.rating < minRating)
+      {
+        console.log(`[Filter] Ignored job ${job.jobId} -> Rating (${job.rating}) is less than configured minimum (${minRating}).`);
         return false;
       }
     }

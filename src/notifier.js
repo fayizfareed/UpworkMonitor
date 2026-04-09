@@ -47,7 +47,9 @@ async function sendJobNotification(job) {
   
   const url = job.url;
 
-  const message = `📌 <b>${title}</b>\n\n💼 <b>Type:</b> ${type}\n💰 <b>Budget:</b> ${budget}\n\n📢 <b>Activity</b>\n👥 <b>Proposals:</b> ${proposals}\n👁️ <b>Last Viewed:</b> ${lastViewed}\n🎙️ <b>Interviewing:</b> ${interviewing}\n📤 <b>Invites Sent:</b> ${invitesSent}\n📥 <b>Unanswered:</b> ${unansweredInvites}\n\n📊 <b>Client Info</b>\n📍 <b>Location:</b> ${location}\n⌚ <b>Current Time:</b> ${currentTime}\n📅 <b>Joined:</b> ${joinedDate}\n🏢 <b>Business:</b> ${businessType}\n📈 <b>Hire Rate:</b> ${hireRate}\n💸 <b>Avg Hourly Rate:</b> ${avgHourlyRate}\n📝 <b>Jobs Posted:</b> ${jobsPosted}\n🔥 <b>Active Jobs:</b> ${activeJobs}\n🤝 <b>Total Hires:</b> ${totalHires}\n\n🛡️ <b>Verifications</b>\n💳 <b>Payment:</b> ${paymentVerified}\n📱 <b>Phone:</b> ${phoneVerified}\n\n🔗 <a href="${url}">View Job</a>`;
+  const rating = escapeHtml(job.rating ? job.rating.toString() : '0');
+
+  const message = `📌 <b>${title}</b>\n\n💼 <b>Type:</b> ${type}\n💰 <b>Budget:</b> ${budget}\n\n📢 <b>Activity</b>\n👥 <b>Proposals:</b> ${proposals}\n👁️ <b>Last Viewed:</b> ${lastViewed}\n🎙️ <b>Interviewing:</b> ${interviewing}\n📤 <b>Invites Sent:</b> ${invitesSent}\n📥 <b>Unanswered:</b> ${unansweredInvites}\n\n📊 <b>Client Info</b>\n📍 <b>Location:</b> ${location}\n⭐ <b>Rating:</b> ${rating}\n⌚ <b>Current Time:</b> ${currentTime}\n📅 <b>Joined:</b> ${joinedDate}\n🏢 <b>Business:</b> ${businessType}\n📈 <b>Hire Rate:</b> ${hireRate}\n💸 <b>Avg Hourly Rate:</b> ${avgHourlyRate}\n📝 <b>Jobs Posted:</b> ${jobsPosted}\n🔥 <b>Active Jobs:</b> ${activeJobs}\n🤝 <b>Total Hires:</b> ${totalHires}\n\n🛡️ <b>Verifications</b>\n💳 <b>Payment:</b> ${paymentVerified}\n📱 <b>Phone:</b> ${phoneVerified}\n\n🔗 <a href="${url}">View Job</a>`;
 
   try {
     const apiUrl = `https://api.telegram.org/bot${TOKEN}/sendMessage`;

@@ -128,7 +128,14 @@ async function scrapeJobsOnPage(page) {
         paymentVerified = '✅';
       }
 
-      // 7. Description (heuristics: look for specific data-test, classes, or get the longest text block)
+      // 7. Rating
+      let rating = 0;
+      const ratingEl = el.querySelector('.air3-rating-value-text');
+      if (ratingEl) {
+         rating = parseFloat(ratingEl.innerText.trim()) || 0;
+      }
+
+      // 8. Description (heuristics: look for specific data-test, classes, or get the longest text block)
       let description = '';
       const descEl = el.querySelector('[data-test="job-description-text"], [data-test="UpCLineClamp"], .up-line-clamp-v2, .job-description-text');
       if (descEl) {
@@ -154,7 +161,7 @@ async function scrapeJobsOnPage(page) {
         description = description.substring(0, 300) + '...';
       }
 
-      results.push({ jobId, title, url, type, budget, proposals, location, paymentVerified, description });
+      results.push({ jobId, title, url, type, budget, proposals, location, paymentVerified, rating, description });
     }
 
     return results;
