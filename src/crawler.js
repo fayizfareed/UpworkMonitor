@@ -5,7 +5,8 @@ const { loadStorage, saveStorage } = require('./storage');
 const { calculateNextInterval, randomDelay, simulateHumanBehavior, delay } = require('./utils');
 const { scrapeJobsOnPage, scrapeDeepJobDetails } = require('./scraper');
 const { detectNewJobs } = require('./detector');
-const { applyCustomFilters, isCountryExcluded } = require('./filter');
+const { applyCustomFilters, applyDeepFilters, isCountryExcluded } = require('./filter');
+const { isLoggedIn, performLogin } = require('./auth');
 const { sendJobNotification, sendSystemMessage } = require('./notifier');
 
 /**
@@ -31,6 +32,38 @@ async function startCrawler()
       userDataDir: userDataDir
     }
   });
+
+  // Start with a login check
+  if (config.auth && config.auth.enabled)
+  {
+    let authenticated = await isLoggedIn(page);
+    if (!authenticated)
+    {
+      const maxRetries = 2;
+      let attempt = 0;
+      while (attempt <= maxRetries && !authenticated)
+      {
+        attempt++;
+        console.log(`[Crawler] User not logged in. Initiating login attempt ${attempt}...`);
+        await performLogin(page, config.auth.username, config.auth.password);
+        
+        // Re-verify login status after attempt
+        authenticated = await isLoggedIn(page);
+        
+        if (authenticated) {
+          console.log('[Crawler] Login successful!');
+        } else if (attempt <= maxRetries) {
+          console.log(`[Crawler] Login attempt ${attempt} failed. Waiting before retry...`);
+          await randomDelay(10, 20); // Increased wait before retry
+        } else {
+          console.error('[Crawler] All login attempts failed. Continuing in guest mode...');
+        }
+      }
+    } else
+    {
+      console.log('[Crawler] Session detected. No login required.');
+    }
+  }
 
   // Quick startup message (can disable if too spammy)
   await sendSystemMessage(`🟢 Upwork Monitor Started\nWatching ${config.searchUrls.length} search URL(s)`);
@@ -82,32 +115,46 @@ async function startCrawler()
             // Human delay before clicking into a job detail page to avoid triggering firewalls
             await randomDelay(3, 6);
             console.log(`[Crawler] Deep crawling Job Details: ${job.url}`);
-            
-            try {
+
+            try
+            {
               await page.goto(job.url, { waitUntil: 'domcontentloaded', timeout: 45000 });
-              
+
               await simulateHumanBehavior(page);
-              
-              const deepData = await scrapeDeepJobDetails(page);
-              if (deepData) {
-                 if (deepData.location !== 'Unknown') job.location = deepData.location;
-                 job.proposals = deepData.proposals !== 'Unknown' ? deepData.proposals : job.proposals;
-                 job.hireRate = deepData.hireRate;
-                 job.joinedDate = deepData.joinedDate;
-                 job.businessType = deepData.businessType;
-                 job.avgHourlyRate = deepData.avgHourlyRate;
-                 job.jobsPosted = deepData.jobsPosted;
-                 job.activeJobs = deepData.activeJobs;
-                 job.totalHires = deepData.totalHires;
+
+              let deepData = await scrapeDeepJobDetails(page);
+
+              if (deepData)
+              {
+                job.proposals = deepData.proposals !== 'Unknown' ? deepData.proposals : job.proposals;
+                job.hireRate = deepData.hireRate;
+                job.joinedDate = deepData.joinedDate;
+                job.businessType = deepData.businessType;
+                job.avgHourlyRate = deepData.avgHourlyRate;
+                job.jobsPosted = deepData.jobsPosted;
+                job.activeJobs = deepData.activeJobs;
+                job.totalHires = deepData.totalHires;
+
+                job.lastViewed = deepData.lastViewed;
+                job.interviewing = deepData.interviewing;
+                job.invitesSent = deepData.invitesSent;
+                job.unansweredInvites = deepData.unansweredInvites;
+                job.currentTime = deepData.currentTime;
+                job.paymentVerified = deepData.paymentVerified;
+                job.phoneVerified = deepData.phoneVerified;
+                job.requiredConnects = deepData.requiredConnects;
+                job.preferredQualifications = deepData.preferredQualifications;
               }
 
-              if (isCountryExcluded(job.location)) {
-                console.log(`[Filter] Ignored Job ${job.jobId} -> Excluded country: ${job.location}`);
-                continue; // Skip the notification since it matches the filter
+              // Apply deep filtering logic
+              if (!applyDeepFilters(job))
+              {
+                continue;
               }
-            } catch (err) {
+            } catch (err)
+            {
               console.log(`[Crawler] Warning: Failed to deep scrape job ${job.jobId}: ${err.message}`);
-              // Fallback to sending what we have
+              // If it fails, we keep the job but skip deep filters as we don't have enough data
             }
 
             await sendJobNotification(job);
@@ -139,7 +186,7 @@ async function startCrawler()
     }
 
     // Determine sleep duration before next overall crawl cycle
-    const sleepSeconds = calculateNextInterval(config.baseIntervalSeconds, config.randomFactor);
+    const sleepSeconds = calculateNextInterval(config.baseIntervalSeconds, config.randomFactor, config.schedules);
     console.log(`[Crawler] Cycle finished. Sleeping for ~${sleepSeconds.toFixed(1)} seconds...`);
     await delay(sleepSeconds * 1000);
   }

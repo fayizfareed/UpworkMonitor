@@ -26,12 +26,39 @@ async function randomDelay(minSec = 2, maxSec = 7) {
 }
 
 /**
- * Calculates the next interval based on base and random factor.
- * e.g., base=120, factor=0.5 -> range [60, 180]
+ * Checks if the current time falls within any configured schedules.
+ * @param {Array} schedules - Array of schedule objects { from, to, intervalMinutes }
+ * @returns {number|null} Interval in seconds if match found, else null.
  */
-function calculateNextInterval(baseIntervalSeconds, randomFactor) {
-  const minInterval = baseIntervalSeconds * (1 - randomFactor);
-  const maxInterval = baseIntervalSeconds * (1 + randomFactor);
+function getCurrentScheduleInterval(schedules) {
+  if (!schedules || !Array.isArray(schedules)) return null;
+
+  const now = new Date();
+  const currentHHmm = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+
+  for (const schedule of schedules) {
+    if (currentHHmm >= schedule.from && currentHHmm <= schedule.to) {
+      return schedule.intervalMinutes * 60;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Calculates the next interval based on base and random factor.
+ * If a schedule matches, it overrides the base interval.
+ */
+function calculateNextInterval(baseIntervalSeconds, randomFactor, schedules = []) {
+  const scheduleInterval = getCurrentScheduleInterval(schedules);
+  const effectiveBase = scheduleInterval !== null ? scheduleInterval : baseIntervalSeconds;
+
+  if (scheduleInterval !== null) {
+      console.log(`[Scheduler] Active schedule found. Using interval: ${scheduleInterval / 60} minutes.`);
+  }
+
+  const minInterval = effectiveBase * (1 - randomFactor);
+  const maxInterval = effectiveBase * (1 + randomFactor);
   
   let actualInterval = getRandomFloat(minInterval, maxInterval);
 
@@ -47,38 +74,73 @@ function calculateNextInterval(baseIntervalSeconds, randomFactor) {
 }
 
 /**
- * Generates human-like movements and scrolling on a Puppeteer page.
- * Avoids rigid, programmatic sequences.
+ * Smoothly scrolls to a random position on the page based on step limits.
  */
-async function simulateHumanBehavior(page) {
-  // 1. Random mouse movement
+async function randomScroll(page, stepSize = 30, delayMs = 150) {
   try {
-    const x = getRandomInt(100, 800);
-    const y = getRandomInt(100, 600);
-    const steps = getRandomInt(10, 30);
-    await page.mouse.move(x, y, { steps });
-    await randomDelay(0.5, 1.5);
-  } catch (err) {
-    // Ignore mouse errors, could occur if target is missing
-  }
-
-  // 2. Random scrolling (partial or full)
-  try {
-    const scrolls = getRandomInt(1, 3);
-    for (let i = 0; i < scrolls; i++) {
-      const scrollAmount = getRandomInt(200, 800);
-      const direction = Math.random() > 0.3 ? 1 : -1; // 70% chance to scroll down
-      await page.mouse.wheel({ deltaY: scrollAmount * direction });
-      await randomDelay(1, 3);
+    const scrollHeight = await page.evaluate(() => document.body.scrollHeight);
+    let currentScroll = await page.evaluate(() => window.scrollY);
+    
+    // Don't always scroll to a completely random spot, often just a bit up/down
+    const currentY = await page.evaluate(() => window.scrollY);
+    const viewPortHeight = await page.evaluate(() => window.innerHeight);
+    
+    // 70% chance to just scroll a bit, 30% chance for a long jump
+    let targetScroll;
+    if (Math.random() > 0.3) {
+        const offset = getRandomInt(100, viewPortHeight);
+        targetScroll = Math.max(0, Math.min(scrollHeight, currentY + (Math.random() > 0.5 ? offset : -offset)));
+    } else {
+        targetScroll = getRandomInt(0, scrollHeight);
     }
-  } catch (err) {}
 
-  // 3. Occasional idle pause mimicking reading or tab switching
-  if (Math.random() < 0.2) {
-    const pauseTime = getRandomInt(5, 15);
-    console.log(`[Human Behavior] Idle pause for ${pauseTime}s on the page...`);
-    await delay(pauseTime * 1000);
+    const direction = targetScroll > currentScroll ? 1 : -1;
+    while (Math.abs(targetScroll - currentScroll) > stepSize) {
+      // Add slight jitter to step size for human feel
+      const jitterStep = stepSize + getRandomInt(-10, 10);
+      currentScroll += direction * Math.max(5, jitterStep);
+      
+      await page.evaluate((y) => window.scrollTo(0, y), currentScroll);
+      
+      // Add slight variation to delay
+      await delay(delayMs + getRandomInt(-50, 50));
+    }
+    
+    await page.evaluate((y) => window.scrollTo(0, y), targetScroll);
+  } catch (err) {
+    // page target might be gone
   }
+}
+
+/**
+ * Randomly moves the mouse cursor across the current viewport.
+ */
+async function randomMouseMovement(page) {
+  try {
+    const viewport = await page.evaluate(() => ({
+      width: window.innerWidth,
+      height: window.innerHeight
+    }));
+
+    const x = getRandomInt(0, viewport.width);
+    const y = getRandomInt(0, viewport.height);
+    const steps = getRandomInt(5, 30);
+
+    await page.mouse.move(x, y, { steps });
+  } catch (err) {
+    // ignore
+  }
+}
+
+/**
+ * Executes a sequence of human-like behavior (wait, scroll, move).
+ */
+async function simulateHumanBehavior(page, minSeconds = 2, maxSeconds = 10) {
+  const delaySec = getRandomFloat(minSeconds, maxSeconds);
+  await delay(delaySec * 1000);
+  
+  await randomScroll(page);
+  await randomMouseMovement(page);
 }
 
 module.exports = {
