@@ -4,6 +4,18 @@
   ],
   "baseIntervalSeconds": 120,
   "randomFactor": 0.5,
+  "schedules": [
+    {
+      "from": "17:30",
+      "to": "23:59",
+      "intervalMinutes": 30
+    },
+    {
+      "from": "00:01",
+      "to": "02:30",
+      "intervalMinutes": 45
+    }
+  ],
   "headless": false,
   "debug": false,
   "filters": {

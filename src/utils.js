@@ -26,12 +26,39 @@ async function randomDelay(minSec = 2, maxSec = 7) {
 }
 
 /**
- * Calculates the next interval based on base and random factor.
- * e.g., base=120, factor=0.5 -> range [60, 180]
+ * Checks if the current time falls within any configured schedules.
+ * @param {Array} schedules - Array of schedule objects { from, to, intervalMinutes }
+ * @returns {number|null} Interval in seconds if match found, else null.
  */
-function calculateNextInterval(baseIntervalSeconds, randomFactor) {
-  const minInterval = baseIntervalSeconds * (1 - randomFactor);
-  const maxInterval = baseIntervalSeconds * (1 + randomFactor);
+function getCurrentScheduleInterval(schedules) {
+  if (!schedules || !Array.isArray(schedules)) return null;
+
+  const now = new Date();
+  const currentHHmm = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+
+  for (const schedule of schedules) {
+    if (currentHHmm >= schedule.from && currentHHmm <= schedule.to) {
+      return schedule.intervalMinutes * 60;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Calculates the next interval based on base and random factor.
+ * If a schedule matches, it overrides the base interval.
+ */
+function calculateNextInterval(baseIntervalSeconds, randomFactor, schedules = []) {
+  const scheduleInterval = getCurrentScheduleInterval(schedules);
+  const effectiveBase = scheduleInterval !== null ? scheduleInterval : baseIntervalSeconds;
+
+  if (scheduleInterval !== null) {
+      console.log(`[Scheduler] Active schedule found. Using interval: ${scheduleInterval / 60} minutes.`);
+  }
+
+  const minInterval = effectiveBase * (1 - randomFactor);
+  const maxInterval = effectiveBase * (1 + randomFactor);
   
   let actualInterval = getRandomFloat(minInterval, maxInterval);
 

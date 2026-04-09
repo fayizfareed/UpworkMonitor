@@ -34,17 +34,21 @@ async function startCrawler()
   });
 
   // Start with a login check
-  if (config.auth && config.auth.enabled) {
-      const authenticated = await isLoggedIn(page);
-      if (!authenticated) {
-          console.log('[Crawler] User not logged in. Initiating login flow...');
-          const success = await performLogin(page, config.auth.username, config.auth.password);
-          if (!success) {
-              console.error('[Crawler] Critical: Login failed. Continuing in guest mode...');
-          }
-      } else {
-          console.log('[Crawler] Session detected. No login required.');
+  if (config.auth && config.auth.enabled)
+  {
+    const authenticated = await isLoggedIn(page);
+    if (!authenticated)
+    {
+      console.log('[Crawler] User not logged in. Initiating login flow...');
+      const success = await performLogin(page, config.auth.username, config.auth.password);
+      if (!success)
+      {
+        console.error('[Crawler] Critical: Login failed. Continuing in guest mode...');
       }
+    } else
+    {
+      console.log('[Crawler] Session detected. No login required.');
+    }
   }
 
   // Quick startup message (can disable if too spammy)
@@ -168,7 +172,7 @@ async function startCrawler()
     }
 
     // Determine sleep duration before next overall crawl cycle
-    const sleepSeconds = calculateNextInterval(config.baseIntervalSeconds, config.randomFactor);
+    const sleepSeconds = calculateNextInterval(config.baseIntervalSeconds, config.randomFactor, config.schedules);
     console.log(`[Crawler] Cycle finished. Sleeping for ~${sleepSeconds.toFixed(1)} seconds...`);
     await delay(sleepSeconds * 1000);
   }
