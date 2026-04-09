@@ -12,6 +12,7 @@
     "minHourlyRate": 25,
     "maxProposals": 20,
     "minRating": 3.5,
+    "minHireRate": 90,
     "excludeKeywords": [
       "wordpress",
       "shopify",

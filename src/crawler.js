@@ -5,7 +5,7 @@ const { loadStorage, saveStorage } = require('./storage');
 const { calculateNextInterval, randomDelay, simulateHumanBehavior, delay } = require('./utils');
 const { scrapeJobsOnPage, scrapeDeepJobDetails } = require('./scraper');
 const { detectNewJobs } = require('./detector');
-const { applyCustomFilters, isCountryExcluded } = require('./filter');
+const { applyCustomFilters, applyDeepFilters, isCountryExcluded } = require('./filter');
 const { isLoggedIn, performLogin } = require('./auth');
 const { sendJobNotification, sendSystemMessage } = require('./notifier');
 
@@ -127,10 +127,16 @@ async function startCrawler()
                 job.requiredConnects = deepData.requiredConnects;
                 job.preferredQualifications = deepData.preferredQualifications;
               }
+
+              // Apply deep filtering logic
+              if (!applyDeepFilters(job))
+              {
+                continue;
+              }
             } catch (err)
             {
               console.log(`[Crawler] Warning: Failed to deep scrape job ${job.jobId}: ${err.message}`);
-              // Fallback to sending what we have
+              // If it fails, we keep the job but skip deep filters as we don't have enough data
             }
 
             await sendJobNotification(job);

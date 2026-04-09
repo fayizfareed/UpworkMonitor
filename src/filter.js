@@ -147,7 +147,56 @@ function isCountryExcluded(country)
   return arrLower.includes(country.toLowerCase().trim());
 }
 
+/**
+ * Applies deep filters after job details are scraped.
+ * @param {Object} job - The job object with deep details.
+ * @returns {boolean} True if the job passes filters.
+ */
+function applyDeepFilters(job)
+{
+  const { minHireRate } = config.filters;
+
+  if (typeof minHireRate === 'number' && minHireRate > 0)
+  {
+    // Parse Hire Rate (e.g., "80%")
+    let hireRateVal = 0;
+    if (job.hireRate && typeof job.hireRate === 'string')
+    {
+      const match = job.hireRate.match(/(\d+)/);
+      if (match) hireRateVal = parseInt(match[1], 10);
+    }
+
+    // Parse Jobs Posted (e.g., "5")
+    let jobsPostedVal = 0;
+    if (job.jobsPosted && typeof job.jobsPosted === 'string')
+    {
+      const match = job.jobsPosted.match(/(\d+)/);
+      if (match) jobsPostedVal = parseInt(match[1], 10);
+    }
+
+    // Logic:
+    // If rate is 0, only accept if jobs posted < 3
+    if (hireRateVal === 0)
+    {
+      if (jobsPostedVal >= 3)
+      {
+        console.log(`[Filter] Ignored job ${job.jobId} -> Hire rate is 0% and client has posted ${jobsPostedVal} jobs.`);
+        return false;
+      }
+    }
+    // Otherwise, check if it meets the minimum hire rate
+    else if (hireRateVal < minHireRate)
+    {
+      console.log(`[Filter] Ignored job ${job.jobId} -> Hire rate (${hireRateVal}%) is lower than minimum (${minHireRate}%).`);
+      return false;
+    }
+  }
+
+  return true;
+}
+
 module.exports = {
   applyCustomFilters,
+  applyDeepFilters,
   isCountryExcluded
 };
